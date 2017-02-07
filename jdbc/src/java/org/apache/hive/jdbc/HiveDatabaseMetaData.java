@@ -746,7 +746,7 @@ public class HiveDatabaseMetaData implements DatabaseMetaData {
   }
 
   public String getURL() throws SQLException {
-    throw new SQLException("Method not supported");
+    return connection.jdbcUriString;
   }
 
   public String getUserName() throws SQLException {

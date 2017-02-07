@@ -91,7 +91,7 @@ public class HiveConnection implements java.sql.Connection {
   private static final String HIVE_VAR_PREFIX = "hivevar:";
   private static final String HIVE_CONF_PREFIX = "hiveconf:";
 
-  private String jdbcUriString;
+  protected String jdbcUriString;
   private String host;
   private int port;
   private final Map<String, String> sessConfMap;
@@ -894,8 +894,18 @@ public class HiveConnection implements java.sql.Connection {
 
   @Override
   public boolean isValid(int timeout) throws SQLException {
-    // TODO Auto-generated method stub
-    throw new SQLException("Method not supported");
+    if (timeout < 0) {
+      throw new SQLException("timeout value was negative");
+    }
+    boolean rc = false;
+    try {
+      String productName = new HiveDatabaseMetaData(this, client, sessHandle)
+              .getDatabaseProductName();
+      rc = true;
+    } catch (SQLException e) {
+      // IGNORE
+    }
+    return rc;
   }
 
   /*
@@ -1067,8 +1077,17 @@ public class HiveConnection implements java.sql.Connection {
 
   @Override
   public void setAutoCommit(boolean autoCommit) throws SQLException {
-    if (autoCommit) {
-      throw new SQLException("enabling autocommit is not supported");
+    // Per JDBC spec, if the connection is closed a SQLException should be thrown.
+    if(isClosed) {
+      throw new SQLException("Connection is closed");
+    }
+    // The auto-commit mode is always enabled for this connection. Per JDBC spec,
+    // if setAutoCommit is called and the auto-commit mode is not changed, the call is a no-op.
+    if (!autoCommit) {
+      LOG.warn("Request to set autoCommit to false; Hive does not support autoCommit=false.");
+      SQLWarning warning = new SQLWarning("Hive does not support autoCommit=false");
+      if (warningChain == null) warningChain = warning;
+      else warningChain.setNextWarning(warning);
     }
   }
 
